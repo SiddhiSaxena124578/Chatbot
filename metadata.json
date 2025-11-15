@@ -1,0 +1,7 @@
+{
+  "name": "Lightning Chatbot",
+  "description": "A sleek and responsive chatbot interface powered by the Gemini API, providing real-time, streaming responses for an engaging conversational experience.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

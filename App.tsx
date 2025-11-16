@@ -67,6 +67,8 @@ const App: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isSending, setIsSending] = useState<boolean>(false);
+  const [isUserSpeaking, setIsUserSpeaking] = useState<boolean>(false);
+  const [isModelSpeaking, setIsModelSpeaking] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const sessionRef = useRef<LiveSession | null>(null);
@@ -159,6 +161,8 @@ const App: React.FC = () => {
     
     setIsConnected(false);
     setIsConnecting(false);
+    setIsUserSpeaking(false);
+    setIsModelSpeaking(false);
   }, []);
   
   const handleToggleConversation = useCallback(async () => {
@@ -204,6 +208,8 @@ const App: React.FC = () => {
           },
           onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.inputTranscription) {
+              setIsUserSpeaking(true);
+              setIsModelSpeaking(false);
               const text = message.serverContent.inputTranscription.text;
               currentInputTranscriptionRef.current += text;
               setMessages(prev => {
@@ -217,6 +223,8 @@ const App: React.FC = () => {
               });
             }
             if (message.serverContent?.outputTranscription) {
+              setIsUserSpeaking(false);
+              setIsModelSpeaking(true);
               const text = message.serverContent.outputTranscription.text;
               currentOutputTranscriptionRef.current += text;
               setMessages(prev => {
@@ -233,10 +241,14 @@ const App: React.FC = () => {
             if (message.serverContent?.turnComplete) {
               currentInputTranscriptionRef.current = '';
               currentOutputTranscriptionRef.current = '';
+              setIsUserSpeaking(false);
+              setIsModelSpeaking(false);
             }
 
             const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
             if (base64Audio && outputAudioContextRef.current) {
+              setIsUserSpeaking(false);
+              setIsModelSpeaking(true);
               const outputCtx = outputAudioContextRef.current;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outputCtx.currentTime);
               
@@ -260,6 +272,7 @@ const App: React.FC = () => {
                 }
                 audioSourcesRef.current.clear();
                 nextStartTimeRef.current = 0;
+                setIsModelSpeaking(false);
             }
           },
           onerror: (e: ErrorEvent) => {
@@ -307,7 +320,14 @@ const App: React.FC = () => {
       
       <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         {messages.map((msg, index) => (
-          <ChatMessage key={index} message={msg} />
+          <ChatMessage 
+            key={index} 
+            message={msg}
+            isSpeaking={
+              index === messages.length - 1 &&
+              ((msg.role === Role.USER && isUserSpeaking) || (msg.role === Role.MODEL && isModelSpeaking))
+            }
+          />
         ))}
       </main>
       
